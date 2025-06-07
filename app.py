@@ -419,47 +419,46 @@ def main():
                                         }
                         
                         # Botón para enviar el examen
-                        if st.button("Enviar examen"):                            
-                            # Preparar el payload para enviar las respuestas
-                            payload = {
-                                "examenId": int(examen_id),
-                                "opcionesSeleccionadas": []
-                            }
-                            
-                            # Procesar las respuestas según el tipo de pregunta
-                            for pregunta_id, respuesta in st.session_state.respuestas.items():
-                                if respuesta['tipo'] == 'SELECCION_UNICA':
-                                    # Para selección única, enviar el ID de la opción
-                                    opcion_id = next(
-                                        int(opt['id']) for opt in preguntas
-                                        if opt['texto'] == respuesta['respuesta']
-                                    )
-                                    payload["opcionesSeleccionadas"].append(int(opcion_id))
-                                elif respuesta['tipo'] == 'TEXTO_ABIERTO':
-                                    # Para texto abierto, enviar el texto
-                                    payload["respuestasTexto"] = {
-                                        "preguntaId": int(pregunta_id),
-                                        "respuesta": respuesta['respuesta']
-                                    }
-                        
-                        # Enviar las respuestas al backend
-                        try:
-                            response = requests.post(
-                                f"{API_BASE_URL}/{ENDPOINTS['results']}",
-                                headers=headers,
-                                json=payload
-                            )
-                            
-                            if response.status_code == 201:  # Created
-                                st.success("✅ Examen enviado con éxito!")
-                                st.write("Puedes ver tus resultados en la sección de Resultados")
-                                st.rerun()
-                            else:
-                                st.error(f"❌ Error al enviar el examen. Código: {response.status_code}")
-                                st.write("Respuesta del servidor:")
-                                st.write(response.text)
-                        except Exception as e:
-                            st.error(f"❌ Error al enviar el examen: {str(e)}")
+                        if st.button("Enviar examen"):
+                            try:
+                                # Preparar el payload para enviar las respuestas
+                                payload = {
+                                    "examenId": int(examen_id),
+                                    "opcionesSeleccionadas": []
+                                }
+                                
+                                # Procesar las respuestas según el tipo de pregunta
+                                for pregunta_id, respuesta in st.session_state.respuestas.items():
+                                    if respuesta['tipo'] == 'SELECCION_UNICA':
+                                        # Para selección única, enviar el ID de la opción
+                                        opcion_id = next(
+                                            int(opt['id']) for opt in preguntas
+                                            if opt['texto'] == respuesta['respuesta']
+                                        )
+                                        payload["opcionesSeleccionadas"].append(int(opcion_id))
+                                    elif respuesta['tipo'] == 'TEXTO_ABIERTO':
+                                        # Para texto abierto, enviar el texto
+                                        payload["respuestasTexto"] = {
+                                            "preguntaId": int(pregunta_id),
+                                            "respuesta": respuesta['respuesta']
+                                        }
+                                
+                                # Enviar las respuestas al backend
+                                response = requests.post(
+                                    f"{API_BASE_URL}/{ENDPOINTS['results']}",
+                                    headers=headers,
+                                    json=payload
+                                )
+                                if response.status_code == 201:  # Created
+                                    st.success("✅ Examen enviado con éxito!")
+                                    st.write("Puedes ver tus resultados en la sección de Resultados")
+                                    st.rerun()
+                                else:
+                                    st.error(f"❌ Error al enviar el examen. Código: {response.status_code}")
+                                    st.write("Respuesta del servidor:")
+                                    st.write(response.text)
+                            except Exception as e:
+                                st.error(f"❌ Error al enviar el examen: {str(e)}")
             else:
                 st.info("No hay exámenes disponibles actualmente")
         else:
