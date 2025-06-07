@@ -34,6 +34,26 @@ st.set_page_config(page_title="EvaluApp", page_icon="📊", layout="wide")
 API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:5000")
 TOKEN = os.environ.get("TOKEN", "")
 
+# ----------------- Página de Inicio -----------------
+def mostrar_inicio():
+    """Muestra la página de inicio con información sobre EvaluApp"""
+    st.title("📊 EvaluApp - Panel de Control")
+    st.write("""
+    ## 🎯 Bienvenido a EvaluApp
+    
+    EvaluApp es una plataforma moderna y eficiente para la creación y gestión de exámenes en línea. 
+    Diseñada para facilitar el proceso educativo, tanto para docentes como para estudiantes.
+    
+    ### 📋 Características principales:
+    - 💻 Creación de exámenes en línea
+    - 📝 Diferentes tipos de preguntas
+    - 📊 Resultados en tiempo real
+    - 🔒 Seguridad y autenticación
+    - 📱 Interfaz responsive
+    """)
+    st.image("https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+            caption="Educación en línea moderna")
+
 # Verificar si estamos en Streamlit Cloud
 if "STREAMLIT_CLOUD" in os.environ:
     # En Streamlit Cloud, las variables de entorno se configuran directamente
@@ -267,7 +287,7 @@ def main():
     headers = get_headers()
 
     if choice == "Inicio":
-        st.header("Bienvenido a EvaluApp")
+        mostrar_inicio()
 
     elif choice == "Exámenes":
         st.header("📝 Gestión de Exámenes")
