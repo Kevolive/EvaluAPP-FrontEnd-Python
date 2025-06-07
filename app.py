@@ -200,24 +200,18 @@ def crear_examen():
                             f"{ENDPOINTS['examenes']}/{examen_id}/preguntas",
                             headers=get_headers(),
                             data={
-                                "src": {
-                                    "examenId": examen_id,
-                                    "preguntas": [
-                                        {"id": id} for id in preguntas_seleccionadas_ids
-                                    ]
-                                }
+                                "preguntas": [
+                                    {"id": id} for id in preguntas_seleccionadas_ids
+                                ]
                             }
                         )
                         
                         # Mostrar el JSON que se está enviando
                         st.write("JSON enviado para asociar preguntas:")
                         st.json({
-                            "src": {
-                                "examenId": examen_id,
-                                "preguntas": [
-                                    {"id": id} for id in preguntas_seleccionadas_ids
-                                ]
-                            }
+                            "preguntas": [
+                                {"id": id} for id in preguntas_seleccionadas_ids
+                            ]
                         }, expanded=True)
                         
                         if preguntas_result:
