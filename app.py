@@ -200,7 +200,9 @@ def crear_examen():
                             preguntas_list.append({"id": int(id)})
                         
                         preguntas_data = {
-                            "preguntas": preguntas_list
+                            "src": {
+                                "preguntas": preguntas_list
+                            }
                         }
                         
                         # Mostrar el JSON que se está enviando
