@@ -30,7 +30,16 @@ class ExamenRequestDTO:
 
 # --------------- Configuración -------------------
 st.set_page_config(page_title="EvaluApp", page_icon="📊", layout="wide")
-load_dotenv()
+
+# Configuración de URLs y tokens
+API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:5000")
+TOKEN = os.environ.get("TOKEN", "")
+
+# Verificar si estamos en Streamlit Cloud
+if "STREAMLIT_CLOUD" in os.environ:
+    # En Streamlit Cloud, las variables de entorno se configuran directamente
+    API_BASE_URL = os.environ.get("API_BASE_URL")
+    TOKEN = os.environ.get("TOKEN")
 
 ROLES = {
     "admin": "ADMIN",
@@ -56,9 +65,7 @@ def select_role():
     return role
 
 def get_headers():
-    if 'role' in st.session_state:
-        return {"X-Role": ROLES[st.session_state.role]}
-    return {}
+    return {"Authorization": f"Bearer {TOKEN}"}
 
 def make_request(method, endpoint, headers=None, data=None, params=None):
     try:
