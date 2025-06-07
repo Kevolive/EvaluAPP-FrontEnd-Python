@@ -195,24 +195,25 @@ def crear_examen():
                         st.write(f"IDs de preguntas a asociar: {preguntas_seleccionadas_ids}")
                         
                         # Hacer la petición para asociar las preguntas
+                        preguntas_list = []
+                        for id in preguntas_seleccionadas_ids:
+                            preguntas_list.append({"id": int(id)})
+                        
+                        preguntas_data = {
+                            "preguntas": preguntas_list
+                        }
+                        
+                        # Mostrar el JSON que se está enviando
+                        st.write("JSON enviado para asociar preguntas:")
+                        st.json(preguntas_data, expanded=True)
+                        
+                        # Hacer la petición para asociar las preguntas
                         preguntas_result = make_request(
                             "POST",
                             f"{ENDPOINTS['examenes']}/{examen_id}/preguntas",
                             headers=get_headers(),
-                            data={
-                                "preguntas": [
-                                    {"id": id} for id in preguntas_seleccionadas_ids
-                                ]
-                            }
+                            data=preguntas_data
                         )
-                        
-                        # Mostrar el JSON que se está enviando
-                        st.write("JSON enviado para asociar preguntas:")
-                        st.json({
-                            "preguntas": [
-                                {"id": id} for id in preguntas_seleccionadas_ids
-                            ]
-                        }, expanded=True)
                         
                         if preguntas_result:
                             st.success("✅ Preguntas asociadas al examen con éxito")
