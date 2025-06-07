@@ -3,7 +3,6 @@ import requests
 import pandas as pd
 from datetime import datetime, date
 import os
-from dotenv import load_dotenv
 from api_routes import ENDPOINTS, build_url
 from dataclasses import dataclass
 import json
