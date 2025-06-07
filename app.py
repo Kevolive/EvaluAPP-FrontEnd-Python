@@ -270,7 +270,7 @@ def crear_examen():
 
 # ----------------- Menú Principal -----------------
 def main():
-    st.title("📊 EvaluApp - Panel de Control")
+   
     role = select_role()
     if not role:
         st.warning("Por favor selecciona tu rol para continuar")
