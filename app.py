@@ -394,28 +394,13 @@ def main():
                                         "Selecciona una opción",
                                         opciones=[opt['texto'] for opt in opciones],
                                         key=f"pregunta_{pregunta['id']}",
-                                        help="Selecciona una sola opción"
+                                        help="Selecciona una opción de la pregunta"
                                     )
                                     
                                     # Guardar la respuesta
                                     if respuesta:
                                         st.session_state.respuestas[pregunta['id']] = {
                                             'tipo': 'SELECCION_UNICA',
-                                            'respuesta': respuesta
-                                        }
-                                elif pregunta.get('tipo') == 'MULTIPLE':
-                                    # Pregunta de selección múltiple
-                                    respuesta = st.multiselect(
-                                        "Selecciona las opciones correctas",
-                                        opciones=[opt['texto'] for opt in opciones],
-                                        key=f"pregunta_{pregunta['id']}",
-                                        help="Selecciona todas las opciones correctas"
-                                    )
-                                    
-                                    # Guardar la respuesta
-                                    if respuesta:
-                                        st.session_state.respuestas[pregunta['id']] = {
-                                            'tipo': 'MULTIPLE',
                                             'respuesta': respuesta
                                         }
                                 elif pregunta.get('tipo') == 'TEXTO_ABIERTO':
@@ -440,46 +425,40 @@ def main():
                                 "examenId": examen_id,
                                 "opcionesSeleccionadas": []
                             }
-                            
-                            # Procesar las respuestas según el tipo de pregunta
-                            for pregunta_id, respuesta in st.session_state.respuestas.items():
-                                if respuesta['tipo'] == 'SELECCION_UNICA':
-                                    # Para selección única, enviar el ID de la opción
-                                    opcion_id = next(
-                                        opt['id'] for opt in preguntas
-                                        if opt['texto'] == respuesta['respuesta']
-                                    )
-                                    payload["opcionesSeleccionadas"].append(opcion_id)
-                                elif respuesta['tipo'] == 'MULTIPLE':
-                                    # Para múltiple, enviar los IDs de las opciones
-                                    for respuesta_text in respuesta['respuesta']:
-                                        opcion_id = next(
-                                            opt['id'] for opt in preguntas
-                                            if opt['texto'] == respuesta_text
-                                        )
-                                        payload["opcionesSeleccionadas"].append(opcion_id)
-                                elif respuesta['tipo'] == 'TEXTO_ABIERTO':
-                                    # Para texto abierto, guardar la respuesta como texto
-                                    payload[f"texto_abierto_{pregunta_id}"] = respuesta['respuesta']
-                            
-                            # Enviar las respuestas al backend
-                            try:
-                                response = requests.post(
-                                    f"{API_BASE_URL}/{ENDPOINTS['results']}",
-                                    headers=headers,
-                                    json=payload
+                        # Procesar las respuestas según el tipo de pregunta
+                        for pregunta_id, respuesta in st.session_state.respuestas.items():
+                            if respuesta['tipo'] == 'SELECCION_UNICA':
+                                # Para selección única, enviar el ID de la opción
+                                opcion_id = next(
+                                    opt['id'] for opt in preguntas
+                                    if opt['texto'] == respuesta['respuesta']
                                 )
-                                
-                                if response.status_code == 201:  # Created
-                                    st.success("✅ Examen enviado con éxito!")
-                                    st.write("Puedes ver tus resultados en la sección de Resultados")
-                                    st.rerun()
-                                else:
-                                    st.error(f"❌ Error al enviar el examen. Código: {response.status_code}")
-                                    st.write("Respuesta del servidor:")
-                                    st.write(response.text)
-                            except Exception as e:
-                                st.error(f"❌ Error al enviar el examen: {str(e)}")
+                                payload["opcionesSeleccionadas"].append(opcion_id)
+                            elif respuesta['tipo'] == 'TEXTO_ABIERTO':
+                                # Para texto abierto, enviar el texto
+                                payload["respuestasTexto"] = {
+                                    "preguntaId": pregunta_id,
+                                    "respuesta": respuesta['respuesta']
+                                }
+                        
+                        # Enviar las respuestas al backend
+                        try:
+                            response = requests.post(
+                                f"{API_BASE_URL}/{ENDPOINTS['results']}",
+                                headers=headers,
+                                json=payload
+                            )
+                            
+                            if response.status_code == 201:  # Created
+                                st.success("✅ Examen enviado con éxito!")
+                                st.write("Puedes ver tus resultados en la sección de Resultados")
+                                st.rerun()
+                            else:
+                                st.error(f"❌ Error al enviar el examen. Código: {response.status_code}")
+                                st.write("Respuesta del servidor:")
+                                st.write(response.text)
+                        except Exception as e:
+                            st.error(f"❌ Error al enviar el examen: {str(e)}")
             else:
                 st.info("No hay exámenes disponibles actualmente")
         else:
