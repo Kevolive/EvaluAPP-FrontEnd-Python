@@ -214,7 +214,7 @@ def crear_examen():
                             "POST",
                             f"{ENDPOINTS['examenes']}/{examen_id}/preguntas",
                             headers=get_headers(),
-                            data=preguntas_data
+                            json=preguntas_data
                         )
                         
                         if preguntas_result:
