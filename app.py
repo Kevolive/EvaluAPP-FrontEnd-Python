@@ -222,9 +222,9 @@ def crear_examen():
                             data={
                                 "src": {
                                     "examenId": examen_id,
-                                    "preguntas": [
-                                        {"id": id} for id in preguntas_seleccionadas_ids
-                                    ]
+                                    "preguntas": {
+                                        "ids": preguntas_seleccionadas_ids
+                                    }
                                 }
                             }
                         )
@@ -234,9 +234,9 @@ def crear_examen():
                         st.json({
                             "src": {
                                 "examenId": examen_id,
-                                "preguntas": [
-                                    {"id": id} for id in preguntas_seleccionadas_ids
-                                ]
+                                "preguntas": {
+                                    "ids": preguntas_seleccionadas_ids
+                                }
                             }
                         }, expanded=True)
                         
