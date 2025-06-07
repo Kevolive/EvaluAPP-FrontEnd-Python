@@ -364,7 +364,7 @@ def main():
                 
                 if examen_seleccionado:
                     # Obtener el ID del examen seleccionado
-                    examen_id = examenes_activos[examenes_activos["titulo"] == examen_seleccionado]["id"].iloc[0]
+                    examen_id = int(examenes_activos[examenes_activos["titulo"] == examen_seleccionado]["id"].iloc[0])
                     
                     # Obtener preguntas del examen
                     preguntas = make_request(
@@ -383,7 +383,7 @@ def main():
                         
                         # Mostrar cada pregunta
                         for pregunta in preguntas:
-                            with st.expander(f"Pregunta {pregunta['id']}: {pregunta['texto']}"):
+                            with st.expander(f"Pregunta {pregunta['id']}: {pregunta['textoPregunta']}"):
                                 # Mostrar las opciones
                                 opciones = pregunta.get('opciones', [])
                                 
@@ -392,7 +392,7 @@ def main():
                                     # Pregunta de selección única
                                     respuesta = st.radio(
                                         "Selecciona una opción",
-                                        opciones=[opt['texto'] for opt in opciones],
+                                        opciones=[opt['textoPregunta'] for opt in opciones],
                                         key=f"pregunta_{pregunta['id']}",
                                         help="Selecciona una opción de la pregunta"
                                     )
@@ -422,24 +422,25 @@ def main():
                         if st.button("Enviar examen"):                            
                             # Preparar el payload para enviar las respuestas
                             payload = {
-                                "examenId": examen_id,
+                                "examenId": int(examen_id),
                                 "opcionesSeleccionadas": []
                             }
-                        # Procesar las respuestas según el tipo de pregunta
-                        for pregunta_id, respuesta in st.session_state.respuestas.items():
-                            if respuesta['tipo'] == 'SELECCION_UNICA':
-                                # Para selección única, enviar el ID de la opción
-                                opcion_id = next(
-                                    opt['id'] for opt in preguntas
-                                    if opt['texto'] == respuesta['respuesta']
-                                )
-                                payload["opcionesSeleccionadas"].append(opcion_id)
-                            elif respuesta['tipo'] == 'TEXTO_ABIERTO':
-                                # Para texto abierto, enviar el texto
-                                payload["respuestasTexto"] = {
-                                    "preguntaId": pregunta_id,
-                                    "respuesta": respuesta['respuesta']
-                                }
+                            
+                            # Procesar las respuestas según el tipo de pregunta
+                            for pregunta_id, respuesta in st.session_state.respuestas.items():
+                                if respuesta['tipo'] == 'SELECCION_UNICA':
+                                    # Para selección única, enviar el ID de la opción
+                                    opcion_id = next(
+                                        int(opt['id']) for opt in preguntas
+                                        if opt['texto'] == respuesta['respuesta']
+                                    )
+                                    payload["opcionesSeleccionadas"].append(int(opcion_id))
+                                elif respuesta['tipo'] == 'TEXTO_ABIERTO':
+                                    # Para texto abierto, enviar el texto
+                                    payload["respuestasTexto"] = {
+                                        "preguntaId": int(pregunta_id),
+                                        "respuesta": respuesta['respuesta']
+                                    }
                         
                         # Enviar las respuestas al backend
                         try:
