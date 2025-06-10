@@ -15,7 +15,7 @@ class ExamenRequestDTO:
     fechaInicio: date
     fechaFin: date
     creadorId: int
-    preguntasIds: list[int] # Nuevo campo para los IDs de las preguntas
+    preguntasIds: list[int]  # Nuevo campo para los IDs de las preguntas
 
     def to_dict(self) -> dict:
         return {
@@ -24,7 +24,7 @@ class ExamenRequestDTO:
             "fechaInicio": self.fechaInicio.isoformat(),
             "fechaFin": self.fechaFin.isoformat(),
             "creadorId": self.creadorId,
-            "preguntasIds": self.preguntasIds # Incluir los IDs de las preguntas
+            "preguntasIds": self.preguntasIds  # Incluir los IDs de las preguntas
         }
 
 # --------------- Configuración -------------------
@@ -138,6 +138,17 @@ def make_request(method, endpoint, headers=None, data=None, params=None):
 # ---------------- Función principal de creación -------------------
 def crear_examen():
     st.subheader("➕ Crear Nuevo Examen")
+    st.markdown("""
+Bienvenido al asistente de creación de exámenes de **EvaluApp**.  
+Aquí podrás diseñar un nuevo examen seleccionando el título, la descripción, el rango de fechas y las preguntas que formarán parte de la evaluación.
+
+- 📝 **Título y descripción:** Define el propósito y los detalles del examen.
+- 📅 **Fechas:** Establece el periodo en el que estará disponible para los estudiantes.
+- ❓ **Preguntas:** Elige entre las preguntas ya registradas para armar tu examen personalizado.
+
+Cuando completes el formulario, haz clic en **Crear Examen** para guardar tu configuración.  
+¡Recuerda que siempre podrás editar o agregar preguntas más adelante!
+""")
 
     # Obtener preguntas disponibles
     preguntas_disponibles = make_request("GET", ENDPOINTS["preguntas"], headers=get_headers())
@@ -278,7 +289,7 @@ def main():
 
     # Definir el menú según el rol
     if role == "admin":
-        menu = ["Inicio", "Exámenes", "Resultados", "Usuarios", "Configuración"]
+        menu = ["Inicio", "Exámenes", "Resultados", "Usuarios", "Configuración", "Estadísticas"]
     elif role == "student":
         menu = ["Inicio", "Realizar Examen", "Resultados"]
     else:
@@ -297,6 +308,7 @@ def main():
 
         st.subheader("📄 Exámenes Registrados")
         examenes = make_request("GET", ENDPOINTS["examenes"], headers=headers)
+        st.markdown("Acá puedes ver los exámenes que ya se han creado y gestionarlos.")
 
         if examenes:
             df = pd.DataFrame(examenes)
@@ -307,6 +319,36 @@ def main():
 
             # ✅ Mostrar tabla limpia
             st.dataframe(df_visible, use_container_width=True)
+
+            # ✏️ Editar examen
+            st.subheader("✏️ Editar examen")
+            exam_id_edit = st.selectbox("Selecciona un examen para editar", df["id"], key="edit_exam_select")
+            if exam_id_edit:
+                examen = df[df["id"] == exam_id_edit].iloc[0]
+                with st.form(key="form_edit_examen"):
+                    nuevo_titulo = st.text_input("Titulo", value =examen["titulo"])
+                    nueva_descripcion = st.text_area("Descripcion", value=examen["descripcion"])
+                    nueva_fecha_inicio = st.date_input("Fecha de inicio", value=pd.to_datetime(examen["fechaInicio"]).date())
+                    nueva_fecha_fin = st.date_input("Fecha de fin", value=pd.to_datetime(examen["fechaFin"]).date())
+                    
+                    submit = st.form_submit_button("Guardar cambios")
+                    if submit:
+                        payload = {
+                            "titulo": nuevo_titulo,
+                            "descripcion": nueva_descripcion,
+                            "fechaInicio": nueva_fecha_inicio.isoformat(),
+                            "fechaFin": nueva_fecha_fin.isoformat(),
+                            "creadorId": int(examen["creadorId"]),
+                            "preguntasIds": [int(pid) for pid in examen.get("preguntasIds", [])]
+                        }
+                        response = requests.put(build_url(f"{ENDPOINTS['examenes']}/{exam_id_edit}"), headers=headers, json=payload)
+                        if response.status_code == 200:
+                            st.success("Examen actualixado con éxito!!!")
+                            st.rerun()
+                        else:
+                            st.error("Error al actualizar el examen")
+                            st.write(f"Detalles del error: {response.text}")
+
 
             # 🗑️ Eliminar examen
             st.subheader("🗑️ Eliminar examen")
@@ -337,7 +379,7 @@ def main():
                 if preguntas is not None:
                     if isinstance(preguntas, list):
                         if preguntas:  # Verifica que la lista no esté vacía
-                            st.success(f"📋 Preguntas del examen ID {exam_id} {exam_titulo}")
+                            st.success(f"📋 Preguntas del examen:  {exam_titulo}")
                             st.dataframe(pd.DataFrame(preguntas), use_container_width=True)
                         else:
                             st.warning(f"⚠️ Este examen no tiene preguntas registradas. ID: {exam_id}, Título: {exam_titulo}")
@@ -358,7 +400,7 @@ def main():
         st.write("Selecciona un examen para realizarlo")
 
         # Obtener exámenes disponibles
-        examenes = make_request("GET", ENDPOINTS["examenes"], headers=headers)
+        examenes = make_request("GET", ENDPOINTS["examenes"], headers=get_headers())
         
         if examenes:
             df_examenes = pd.DataFrame(examenes)
@@ -567,20 +609,57 @@ def main():
             return
 
         st.header("👥 Gestión de Usuarios")
-        users = make_request("GET", ENDPOINTS["users"], headers=headers)
+        users = make_request("GET", "admin/users", headers=headers)
         if users:
             df = pd.DataFrame(users)
             columns_to_hide = ['creadorId', 'CreadorNombre', 'preguntasIds']
             df_display = df.drop(columns=[col for col in columns_to_hide if col in df.columns], errors='ignore')
             st.dataframe(df_display, use_container_width=True)
 
-    elif choice == "Configuración":
-        if st.session_state.role != "admin":
-            st.warning("Esta sección solo está disponible para administradores")
-            return
+    elif choice == "Estadísticas":
+     st.header("📈 Estadísticas de los exámenes por mes")
+   
+     examenes = make_request("GET", ENDPOINTS['examenes'], headers=headers)
+     if not examenes:
+        st.info("no hay exámenes que mostrar")
+     else: 
+        df = pd.DataFrame(examenes)
+        if "fechaFin" in df.columns:
+            df = df[df["fechaFin"].notna()]
+            df["fechaFin"] = pd.to_datetime(df["fechaFin"], errors='coerce')
+            df = df[df["fechaFin"].notna()]
+            df["mes_dt"] = df["fechaFin"].dt.to_period("M").dt.to_timestamp()
+            df["mes"] = df["mes_dt"].dt.strftime("%B %Y")
+            conteo = df.groupby(["mes"]).size().reset_index(name="Exámenes realizados")
+            conteo = conteo.sort_values("mes")
+            conteo["mes"] = conteo["mes"].astype(str)
+            st.bar_chart(conteo.set_index("mes"))
+            st.dataframe(conteo)
+        else:
+            st.warning("no se encontró la columna 'fechaFin' en los exámenes")
 
-        st.header("⚙️ Configuración del Sistema")
-        st.info("Aquí puedes agregar configuración avanzada más adelante.")
+    elif choice == "Configuración":
+     if st.session_state.role != "admin":
+        st.warning("Esta sección solo está disponible para administradores")
+        return
+
+     st.header("⚙️ Configuración del Sistema")
+     if "color_fondo" not in st.session_state:
+        st.session_state["color_fondo"] = "#ffffff"
+     if "color_texto" not in st.session_state:
+        st.session_state["color_texto"] = "#000000"
+     if "color_boton" not in st.session_state:
+        st.session_state["color_boton"] = "#4CAF50"
+
+     st.session_state["color_fondo"] = st.color_picker("🎨 Color de fondo", st.session_state["color_fondo"])
+     st.session_state["color_texto"] = st.color_picker("📝 Color de texto", st.session_state["color_texto"])
+     st.session_state["color_boton"] = st.color_picker("🔘 Color de botones", st.session_state["color_boton"])
+
+
+
+    
+    # Modo solo lectura
+    
 
 if __name__ == "__main__":
     main()
