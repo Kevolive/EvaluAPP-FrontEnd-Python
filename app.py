@@ -226,6 +226,21 @@ Cuando completes el formulario, haz clic en **Crear Examen** para guardar tu con
                         st.write(f"IDs de preguntas a asociar: {preguntas_seleccionadas_ids}")
                         
                         # Hacer la petición para asociar las preguntas
+                        preguntas_list = []
+                        for id in preguntas_seleccionadas_ids:
+                            preguntas_list.append({"id": int(id)})
+                        
+                        preguntas_data = {
+                            "src": {
+                                "preguntas": preguntas_list
+                            }
+                        }
+                        
+                        # Mostrar el JSON que se está enviando
+                        st.write("JSON enviado para asociar preguntas:")
+                        st.json(preguntas_data, expanded=True)
+                        
+                        # Hacer la petición para asociar las preguntas
                         preguntas_result = make_request(
                             "POST",
                             f"{ENDPOINTS['examenes']}/{examen_id}/preguntas",
@@ -233,9 +248,9 @@ Cuando completes el formulario, haz clic en **Crear Examen** para guardar tu con
                             data={
                                 "src": {
                                     "examenId": examen_id,
-                                    "preguntas": {
-                                        "ids": preguntas_seleccionadas_ids
-                                    }
+                                    "preguntas": [
+                                        {"id": id} for id in preguntas_seleccionadas_ids
+                                    ]
                                 }
                             }
                         )
@@ -245,9 +260,9 @@ Cuando completes el formulario, haz clic en **Crear Examen** para guardar tu con
                         st.json({
                             "src": {
                                 "examenId": examen_id,
-                                "preguntas": {
-                                    "ids": preguntas_seleccionadas_ids
-                                }
+                                "preguntas": [
+                                    {"id": id} for id in preguntas_seleccionadas_ids
+                                ]
                             }
                         }, expanded=True)
                         
