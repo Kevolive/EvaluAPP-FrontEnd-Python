@@ -223,17 +223,12 @@ Cuando completes el formulario, haz clic en **Crear Examen** para guardar tu con
                     # Ahora asociar las preguntas al examen
                     if preguntas_seleccionadas_ids:
                         st.write("\nAsociando preguntas al examen...")
-                        st.write(f"IDs de preguntas a asociar: {preguntas_seleccionadas_ids}")
+                        st.write(f"IDs de preguntas a asociar: {preguntas_seleccionadas_ids}")           
+                       
                         
-                        # Hacer la petición para asociar las preguntas
-                        preguntas_list = []
-                        for id in preguntas_seleccionadas_ids:
-                            preguntas_list.append({"id": int(id)})
-                        
-                        preguntas_data = {
-                            "src": {
-                                "preguntas": preguntas_list
-                            }
+                        preguntas_data = {                             
+                                "preguntas": [int(id) for id in preguntas_seleccionadas_ids]                              
+                            
                         }
                         
                         # Mostrar el JSON que se está enviando
@@ -245,15 +240,16 @@ Cuando completes el formulario, haz clic en **Crear Examen** para guardar tu con
                             "POST",
                             f"{ENDPOINTS['examenes']}/{examen_id}/preguntas",
                             headers=get_headers(),
-                            data={
-                                "src": {
-                                    "examenId": examen_id,
-                                    "preguntas": [
-                                        {"id": id} for id in preguntas_seleccionadas_ids
-                                    ]
-                                }
-                            }
+                            data=preguntas_data
                         )
+
+                        #Validar respuesta del backend
+                        if preguntas_result:
+                            st.success("✅ Preguntas asociadas al examen con éxito")
+                        else:
+                            st.error("❌ Error al asociar las preguntas al examen")
+                            st.write("Respuesta del backend:")
+                            st.json(preguntas_result)
                         
                         # Mostrar el JSON que se está enviando
                         st.write("JSON enviado para asociar preguntas:")
