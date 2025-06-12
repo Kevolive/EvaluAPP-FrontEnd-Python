@@ -150,32 +150,44 @@ Cuando completes el formulario, haz clic en **Crear Examen** para guardar tu con
 ¡Recuerda que siempre podrás editar o agregar preguntas más adelante!
 """)
 
-    # Obtener preguntas disponibles
-    preguntas_disponibles = make_request("GET", ENDPOINTS["preguntas"], headers=get_headers())
-    # st.write("Debug - Preguntas disponibles:", preguntas_disponibles) # <-- LÍNEA DE DEPURACIÓN ELIMINADA
-    
-    if preguntas_disponibles is None or not preguntas_disponibles: # Añadida comprobación de lista vacía
-        st.error("No se pudieron cargar las preguntas o no hay preguntas disponibles. Inténtalo de nuevo más tarde o añade preguntas primero.")
-        # Opcionalmente, podrías permitir crear el examen sin preguntas si es válido
-        # preguntas_disponibles = [] 
-        return # O decidir no continuar si las preguntas son cruciales
-
-    # Crear un mapeo de enunciado de pregunta a ID de pregunta
-    # La API devuelve 'id' y 'textoPregunta'
-    pregunta_options = {pregunta['textoPregunta']: pregunta['id'] for pregunta in preguntas_disponibles}
-
     with st.form(key="form_create_exam", clear_on_submit=True):
         titulo = st.text_input("Título del Examen")
         descripcion = st.text_area("Descripción")
         fecha_inicio = st.date_input("Fecha de Inicio", datetime.now().date())
         fecha_fin = st.date_input("Fecha de Fin", datetime.now().date() + pd.Timedelta(days=7))
-        
-        # Selector de preguntas
-        selected_enunciados = st.multiselect(
-            "Seleccionar Preguntas",
-            options=list(pregunta_options.keys()),
-            help="Selecciona las preguntas que formarán parte de este examen."
-        )
+
+        st.markdown("### ❓ Preguntas del examen")
+
+        # Número de preguntas
+        num_preguntas = st.number_input("¿Cuántas preguntas quieres agregar?", min_value=1, max_value=20, step=1, value=1)
+
+        preguntas = []
+        for i in range(num_preguntas):
+            st.markdown(f"#### Pregunta {i+1}")
+            texto = st.text_area(f"Texto de la pregunta {i+1}", key=f"texto_{i}")
+            tipo = st.selectbox(
+                f"Tipo de pregunta {i+1}",
+                ["SELECCION_UNICA", "TEXTO_ABIERTO"],
+                key=f"tipo_{i}"
+            )
+            opciones = []
+            if tipo == "SELECCION_UNICA":
+                num_opciones = st.number_input(f"Cantidad de opciones para pregunta {i+1}", min_value=2, max_value=6, value=2, key=f"num_opciones_{i}")
+                for j in range(num_opciones):
+                    opcion_texto = st.text_input(f"Opción {j+1} de Pregunta {i+1}", key=f"opcion_{i}_{j}")
+                    opciones.append({
+                    "textoPregunta": opcion_texto,
+                    "esCorrecta": False
+                    })
+            
+            preguntas.append({
+                "textoPregunta": texto,
+                "tipoPregunta": tipo,
+                "opciones": opciones,
+                "puntos":1
+
+                
+            })
 
         if st.form_submit_button("Crear Examen"):
             if not titulo:
@@ -184,100 +196,66 @@ Cuando completes el formulario, haz clic en **Crear Examen** para guardar tu con
             if fecha_inicio >= fecha_fin:
                 st.error("La fecha de inicio debe ser anterior a la de fin")
                 return
-            if not selected_enunciados: # Opcional: requerir al menos una pregunta
-                st.warning("Es recomendable seleccionar al menos una pregunta para el examen.")
-                # Podrías decidir si esto es un error o solo una advertencia
 
-            # Obtener los IDs de las preguntas seleccionadas
-            preguntas_seleccionadas_ids = [pregunta_options[enunciado] for enunciado in selected_enunciados]
+            creador_id = 1  # ⚠️ Reemplazar con el ID del usuario autenticado
+
+            # Crear el examen
+            examen_sin_preguntas = ExamenRequestDTO(
+                titulo=titulo,
+                descripcion=descripcion,
+                fechaInicio=fecha_inicio,
+                fechaFin=fecha_fin,
+                creadorId=creador_id,
+                preguntasIds=[]
+            )
+
+            result = make_request(
+                "POST",
+                ENDPOINTS["examenes"],
+                headers=get_headers(),
+                data=examen_sin_preguntas.to_dict()
+            )
 
             try:
-                creador_id = 1  # ⚠️ Temporal — reemplazar por el ID del usuario actual logueado
-                
-                # Primero crear el examen sin preguntas
-                examen_sin_preguntas = ExamenRequestDTO(
-                    titulo=titulo,
-                    descripcion=descripcion,
-                    fechaInicio=fecha_inicio,
-                    fechaFin=fecha_fin,
-                    creadorId=creador_id,
-                    preguntasIds=[]  # No enviamos preguntas en la creación
-                )
-
-                # Mostrar los datos que se están enviando
-                st.write("Datos enviados al backend para crear el examen:")
-                st.json(examen_sin_preguntas.to_dict(), expanded=True)
-
-                # Crear el examen
-                result = make_request(
-                    "POST",
-                    ENDPOINTS["examenes"],
-                    headers=get_headers(),
-                    data=examen_sin_preguntas.to_dict()
-                )
-
                 if result:
                     examen_id = result.get("id")
                     st.success(f"✅ Examen creado con éxito. ID: {examen_id}")
-                    
-                    # Ahora asociar las preguntas al examen
-                    if preguntas_seleccionadas_ids:
-                        st.write("\nAsociando preguntas al examen...")
-                        st.write(f"IDs de preguntas a asociar: {preguntas_seleccionadas_ids}")           
-                       
-                        
-                        preguntas_data = {                             
-                                "preguntas": [int(id) for id in preguntas_seleccionadas_ids]                              
-                            
-                        }
-                        
-                        # Mostrar el JSON que se está enviando
-                        st.write("JSON enviado para asociar preguntas:")
-                        st.json(preguntas_data, expanded=True)
-                        
-                        # Hacer la petición para asociar las preguntas
-                        preguntas_result = make_request(
-                            "POST",
-                            f"{ENDPOINTS['examenes']}/{examen_id}/preguntas",
-                            headers=get_headers(),
-                            data=preguntas_data
-                        )
 
-                        #Validar respuesta del backend
-                        if preguntas_result:
-                            st.success("✅ Preguntas asociadas al examen con éxito")
-                        else:
-                            st.error("❌ Error al asociar las preguntas al examen")
-                            st.write("Respuesta del backend:")
-                            st.json(preguntas_result)
-                        
-                        # Mostrar el JSON que se está enviando
-                        st.write("JSON enviado para asociar preguntas:")
-                        st.json({
-                            "src": {
-                                "examenId": examen_id,
-                                "preguntas": [
-                                    {"id": id} for id in preguntas_seleccionadas_ids
-                                ]
-                            }
-                        }, expanded=True)
-                        
-                        if preguntas_result:
-                            st.success("✅ Preguntas asociadas al examen con éxito")
-                        else:
-                            st.error("❌ Error al asociar las preguntas al examen")
-                            st.write("Respuesta del backend:")
-                            st.json(preguntas_result)
+                    # Enviar las preguntas recién escritas
+                    for pregunta in preguntas:
+                        payload = {
+                            "textoPregunta": pregunta["textoPregunta"],
+                            "tipoPregunta": pregunta["tipoPregunta"],
+                            "examenId": examen_id,
+                            # "opciones": pregunta["opciones"],
+                            "puntos": pregunta.get("puntos", 1)
+                        }
+
+                        try:
+                            pregunta_result = make_request(
+                                "POST",
+                                ENDPOINTS["preguntas"],
+                                headers=get_headers(),
+                                data=payload
+                            )
+
+                            if pregunta_result:
+                                st.success(f"✅ Pregunta agregada: {pregunta['textoPregunta']}")
+                            else:
+                                st.error(f"❌ Error al crear la pregunta: {pregunta['textoPregunta']}")
+                        except Exception as e:
+                            st.error(f"⚠️ Error inesperado al crear la pregunta: {str(e)}")
+                            st.write("Detalles del error:")
+                            st.write(str(e))
+
                 else:
                     st.error("❌ Error al crear el examen")
-                    st.write("Respuesta del backend:")
-                    st.json(result)
 
             except Exception as e:
                 st.error(f"⚠️ Error inesperado: {str(e)}")
                 st.write("Detalles del error:")
                 st.write(str(e))
-
+                
                 if result:
                     st.success("✅ Examen creado con éxito")
                     st.json(result)
@@ -286,9 +264,6 @@ Cuando completes el formulario, haz clic en **Crear Examen** para guardar tu con
                     st.error("❌ Error al crear el examen")
                     st.write("Respuesta del backend:")
                     st.json(result)
-
-            except Exception as e:
-                st.error(f"⚠️ Error inesperado: {str(e)}")
 
 # ----------------- Menú Principal -----------------
 def main():
@@ -319,6 +294,10 @@ def main():
 
         st.subheader("📄 Exámenes Registrados")
         examenes = make_request("GET", ENDPOINTS["examenes"], headers=headers)
+        st.write("📥 Respuesta cruda del backend:")
+        # st.write(examenes)
+        st.write("📡 URL llamada:", build_url(ENDPOINTS["examenes"]))
+
         st.markdown("Acá puedes ver los exámenes que ya se han creado y gestionarlos.")
 
         if examenes:
@@ -416,13 +395,29 @@ def main():
         if examenes:
             df_examenes = pd.DataFrame(examenes)
             
+
+            st.markdown("### 🔎 Diagnóstico de exámenes")
+            st.write("📅 Fecha actual:", date.today())
+
+            if "fechaInicio" in df_examenes.columns and "fechaFin" in df_examenes.columns:
+                st.write("📆 Fechas de cada examen:")
+                st.write(df_examenes[["id", "titulo", "fechaInicio", "fechaFin"]])
+
+
+            if "preguntasIds" in df_examenes.columns:
+                st.write("❓ Preguntas asociadas por examen:")
+                st.write(df_examenes[["id", "titulo", "preguntasIds"]]) 
+
             # Filtrar exámenes que están activos (fechaInicio <= hoy <= fechaFin)
             hoy = date.today()
             examenes_activos = df_examenes[
                 (pd.to_datetime(df_examenes["fechaInicio"]).dt.date <= hoy) &
                 (pd.to_datetime(df_examenes["fechaFin"]).dt.date >= hoy)
             ]
-            
+
+            examenes_activos = examenes_activos[
+                examenes_activos["preguntasIds"].apply(lambda x: isinstance(x, list) and len(x) > 0)
+            ]
             if len(examenes_activos) > 0:
                 # Mostrar exámenes activos
                 st.subheader("Exámenes disponibles")
